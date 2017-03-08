@@ -12,131 +12,145 @@
 #include <iostream>
 
 #define PI 3.14159
-#define CIRCLE_RES 20	//circle clicked resolution (how many segments around circle)
-#define CIRCLE_RAD 20	//circle clicked radius
 
-//circles to draw 
-class Circle {
+enum keys {KEY_W, KEY_A, KEY_S, KEY_D, KEY_MAX};
+bool keyPressed[KEY_MAX] = { false };
+
+class Camera {
 public:
-	Circle(int x, int y, int r) {
-		m_x = x; 
-		m_y = y;
-		m_r = r;
-	}
+	GLfloat x = 0;
+	GLfloat y = 0;
+	GLfloat z = 0;
+	GLfloat pitch = 0;
+	GLfloat yaw = 0;
 
-	int m_x = 0;	//x position
-	int m_y = 0;	//y position
-	int m_r = 0;	//radius
+	void look() {
+		GLfloat dx = /*cos(pitch) **/ sin(yaw);
+		GLfloat dy = sin(pitch);
+		GLfloat dz = /*cos(pitch) **/ cos(yaw);
+		
+
+		if (keyPressed[KEY_W]) {
+			x += dx;
+			y += dy;
+			z += dz;
+		}
+		if (keyPressed[KEY_S]) {
+			x -= dx;
+			y -= dy;
+			z -= dz;
+		}
+		if (keyPressed[KEY_A]) {
+			x += -dz;
+			z += dx;
+		}
+		if (keyPressed[KEY_D]) {
+			x -= -dz;
+			z -= dx;
+		}
+
+		gluLookAt(x, y, z, x + dx, y + dy, z + dz, 0, 1, 0);
+	}
 };
 
 //shape to be transformed
 class GLObject {
 public:
-	double hScale = 1.0;
-	double vScale = 1.0;
-	double xPos = 400;
-	double yPos = 300;
-	int angle = 0;
+	std::vector<GLfloat> buf_vertices;
 };
 
-//vector of clicked circle objects
-std::vector<Circle*> vecCircles;
-//transformed shape (cat head)
-GLObject objShape;
-//if menu is open
-bool menuOpen = false;
+Camera cam = Camera();
+GLObject objModel;
 
 //screen width and height to modify matrices (like when resizing)
 int screenWidth = 800;
 int screenHeight = 600;
-
-//draw a circle from the object
-void drawCircle(Circle* cir, int reso) {
-	glBegin(GL_POLYGON);
-	for (int j = 0; j < reso; j++) {
-		double xPos = cir->m_x + cir->m_r * cos((2 * PI) / reso * j);
-		double yPos = cir->m_y + cir->m_r * sin((2 * PI) / reso * j);
-
-		glVertex2f((float)xPos, (float)yPos);
-	}
-	glEnd();
-}
-
-//draw a circle from variables
-void drawCircle(int x, int y, int r, int resolution) {
-	Circle temp(x, y, r);
-	drawCircle(&temp, resolution);
-}
+int mouseX = screenWidth / 2;
+int mouseY = screenHeight / 2;
 
 void displayLoop(void) {
 	//clear screen to black
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	//load base draw matrix
+	glEnable(GL_DEPTH_TEST);
+
+	//draw model
+	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	//change to use screen pixels as coordinate system.
+	GLfloat aspect = (GLfloat)screenWidth / (screenHeight > 0 ? screenHeight : 1);
+	gluPerspective(45.0f, aspect, 0.1f, 100.0f);
+	cam.look();
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	glTranslatef(0, 0, -10);
+
+	glBegin(GL_QUADS);                // Begin drawing the color cube with 6 quads
+									  // Top face (y = 1.0f)
+									  // Define vertices in counter-clockwise (CCW) order with normal pointing out
+	glColor3f(0.0f, 1.0f, 0.0f);     // Green
+	glVertex3f(1.0f, 1.0f, -1.0f);
+	glVertex3f(-1.0f, 1.0f, -1.0f);
+	glVertex3f(-1.0f, 1.0f, 1.0f);
+	glVertex3f(1.0f, 1.0f, 1.0f);
+
+	// Bottom face (y = -1.0f)
+	glColor3f(1.0f, 0.5f, 0.0f);     // Orange
+	glVertex3f(1.0f, -1.0f, 1.0f);
+	glVertex3f(-1.0f, -1.0f, 1.0f);
+	glVertex3f(-1.0f, -1.0f, -1.0f);
+	glVertex3f(1.0f, -1.0f, -1.0f);
+
+	// Front face  (z = 1.0f)
+	glColor3f(1.0f, 0.0f, 0.0f);     // Red
+	glVertex3f(1.0f, 1.0f, 1.0f);
+	glVertex3f(-1.0f, 1.0f, 1.0f);
+	glVertex3f(-1.0f, -1.0f, 1.0f);
+	glVertex3f(1.0f, -1.0f, 1.0f);
+
+	// Back face (z = -1.0f)
+	glColor3f(1.0f, 1.0f, 0.0f);     // Yellow
+	glVertex3f(1.0f, -1.0f, -1.0f);
+	glVertex3f(-1.0f, -1.0f, -1.0f);
+	glVertex3f(-1.0f, 1.0f, -1.0f);
+	glVertex3f(1.0f, 1.0f, -1.0f);
+
+	// Left face (x = -1.0f)
+	glColor3f(0.0f, 0.0f, 1.0f);     // Blue
+	glVertex3f(-1.0f, 1.0f, 1.0f);
+	glVertex3f(-1.0f, 1.0f, -1.0f);
+	glVertex3f(-1.0f, -1.0f, -1.0f);
+	glVertex3f(-1.0f, -1.0f, 1.0f);
+
+	// Right face (x = 1.0f)
+	glColor3f(1.0f, 0.0f, 1.0f);     // Magenta
+	glVertex3f(1.0f, 1.0f, -1.0f);
+	glVertex3f(1.0f, 1.0f, 1.0f);
+	glVertex3f(1.0f, -1.0f, 1.0f);
+	glVertex3f(1.0f, -1.0f, -1.0f);
+	glEnd();  // End of drawing color-cube
+
+	//glEnableClientState(GL_VERTEX_ARRAY);
+	//glVertexPointer(3, GL_FLOAT, 0, &objModel.buf_vertices[0]);
+	//glDrawArrays(GL_TRIANGLES, 0, 12 * 3);
+
+	/*
+	//draw GUI
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
 	gluOrtho2D(0, screenWidth, screenHeight, 0);
+	//glDisable(GL_DEPTH_TEST);
+	//glDisable(GL_CULL_FACE);
+	//glDisable(GL_TEXTURE_2D);
+	//glDisable(GL_LIGHTING);
 
-	//draw clicked circles 
-	glColor3f(1.0f, 1.0f, 1.0f);
-	for (size_t i = 0; i < vecCircles.size(); i++) {
-		drawCircle(vecCircles.at(i), CIRCLE_RES);
-	}
-
-	//transform draw matrix
-	glTranslated(objShape.xPos, objShape.yPos, 0);
-	glRotated(objShape.angle, 0, 0, 1);
-	glScaled(objShape.hScale, objShape.vScale, 1);
-	
-	//draw cat head (tan circle)
-	glColor3f(0.82f, 0.71f, 0.55f);
-	drawCircle(0, 0, 40, 40);
-
-	//draw cat ears (tan triangles)
 	glBegin(GL_TRIANGLES);
-	glVertex2f(-35, -10);
-	glVertex2f(-50, -60);
-	glVertex2f(-15, -35);
-	glVertex2f(35, -10);
-	glVertex2f(50, -60);
-	glVertex2f(15, -35);
+	glVertex3f(0, 200, 0);
+	glVertex3f(100, 100, 0);
+	glVertex3f(200, 200, 0);
 	glEnd();
-
-	//draw cat eyes (green circles)
-	glColor3f(0.24f, 0.70f, 0.44f);
-	drawCircle(-15, -15, 7, 10);
-	drawCircle(15, -15, 7, 10);
-
-	//draw cat irises (black triangles)
-	glColor3f(0.0f, 0.0f, 0.0f);
-	glBegin(GL_TRIANGLES);
-	//left iris
-	glVertex2f(-16, -15);
-	glVertex2f(-14, -15);
-	glVertex2f(-15, -23);
-	
-	glVertex2f(-16, -15);
-	glVertex2f(-14, -15);
-	glVertex2f(-15, -7);
-
-	//right iris
-	glVertex2f(16, -15);
-	glVertex2f(14, -15);
-	glVertex2f(15, -23);
-
-	glVertex2f(16, -15);
-	glVertex2f(14, -15);
-	glVertex2f(15, -7);
-	glEnd();
-
-	//draw cat nose (pink triangle)
-	glColor3f(.80f, 0.51f, 0.55f);
-	glBegin(GL_TRIANGLES);
-	glVertex2f(0, -2);
-	glVertex2f(-6, 9);
-	glVertex2f(6, 9);
-	glEnd();
+	*/
 
 	//swap buffers (redraw screen)
 	glutSwapBuffers();
@@ -149,114 +163,43 @@ void resizeScreen(int width, int height) {
 	glViewport(0, 0, screenWidth, screenHeight);
 }
 
-//get whether menu is opened or not (stops creating circles)
-void processMenuStatus(int status, int x, int y) {
-	if (status == GLUT_MENU_IN_USE) menuOpen = true;
-	else menuOpen = false;
-}
-
-//determine function by menu item click
-void menu(int item) {
-	switch (item) {
-	case 1:
-		objShape.xPos -= 5;
-		break;
-	case 2:
-		objShape.xPos += 5;
-		break;
-	case 3:
-		objShape.yPos -= 5;
-		break;
-	case 4:
-		objShape.yPos += 5;
-		break;
-	case 5:
-		objShape.hScale *= 2;
-		break;
-	case 6:
-		objShape.hScale *= 0.5;
-		break;
-	case 7:
-		objShape.vScale *= 2;
-		break;
-	case 8:
-		objShape.vScale *= 0.5;
-		break;
-	case 9:
-		objShape.angle += 10;
-		break;
-	case 10:
-		objShape.angle -= 10;
-		break;
-	default:
-		std::cout << "menu number " << item << " pressed" << std::endl;
-		break;
-	}
-}
-
-//create the popup menu that shows on right click
-void createMenu() {
-	int subTranslate = glutCreateMenu(menu);
-	glutAddMenuEntry("Left", 1);
-	glutAddMenuEntry("Right", 2);
-	glutAddMenuEntry("Up", 3);
-	glutAddMenuEntry("Down", 4);
-
-	int subScale = glutCreateMenu(menu);
-	glutAddMenuEntry("H-Enlarge", 5);
-	glutAddMenuEntry("H-Shrink", 6);
-	glutAddMenuEntry("V-Enlarge", 7);
-	glutAddMenuEntry("V-Shrink", 8);
-
-	int subRotate = glutCreateMenu(menu);
-	glutAddMenuEntry("Clockwise", 9);
-	glutAddMenuEntry("Counter-Clockwise", 10);
-
-	int mainMenu = glutCreateMenu(menu);
-	glutAddSubMenu("Translate", subTranslate);
-	glutAddSubMenu("Scale", subScale);
-	glutAddSubMenu("Rotate", subRotate);
-
-	glutAttachMenu(GLUT_RIGHT_BUTTON);
-}
-
-//special key presses (not needed in this program)
-/*
-void pressKey(int key, int x, int y) {
-	switch (key) {
-	case GLUT_KEY_UP:
-
-		break;
-	case GLUT_KEY_DOWN:
-		
-		break;
-	}
-}
-
-void releaseKey(int key, int x, int y) {
-	switch (key) {
-	case GLUT_KEY_UP:
-		
-		break;
-	case GLUT_KEY_DOWN:
-
-		break;
-	}
-}*/
-
 void pressNormalKey(unsigned char key, int x, int y) {
 	switch (key) {
-	//quit when Q key is pressed
-	case 'Q':
-	case 'q':
+	//quit when Esc key is pressed
+	case 27:
 		exit(1);
+		break;
+	case 'w':
+		keyPressed[KEY_W] = true;
+		break;
+	case 'a':
+		keyPressed[KEY_A] = true;
+		break;
+	case 's':
+		keyPressed[KEY_S] = true;
+		break;
+	case 'd':
+		keyPressed[KEY_D] = true;
 		break;
 	}
 }
 
 //when a key is released (not needed)
 void releaseNormalKey(unsigned char key, int x, int y) {
-
+	switch (key) {
+	case 'w':
+		keyPressed[KEY_W] = false;
+		break;
+	case 'a':
+		keyPressed[KEY_A] = false;
+		break;
+	case 's':
+		keyPressed[KEY_S] = false;
+		break;
+	case 'd':
+		keyPressed[KEY_D] = false;
+		break;
+	}
 }
 
 //handler for mouse buttons
@@ -267,10 +210,7 @@ void mouseButton(int button, int state, int x, int y) {
 		if (state == GLUT_UP) {
 			
 		} else {// state = GLUT_DOWN
-			//draw a circle if the menu isn't open
-			if (!menuOpen) {
-				vecCircles.push_back(new Circle(x, y, CIRCLE_RAD));
-			}
+			
 		}
 		break;
 	//handle the right mouse button
@@ -287,11 +227,68 @@ void mouseButton(int button, int state, int x, int y) {
 
 		}
 		else {// state = GLUT_DOWN
-			objShape.xPos = x;
-			objShape.yPos = y;
+			
 		}
 		break;
 	}
+}
+
+void mouseMove(int x, int y) {
+	int oldMouseX = mouseX;
+	int oldMouseY = mouseY;
+	mouseX = x;
+	mouseY = y;
+
+	GLfloat newPitch = (GLfloat)(cam.pitch + PI * (oldMouseY - mouseY) / 180);
+	if (newPitch > PI / 2) newPitch = (GLfloat)PI / 2;
+	if (newPitch < -PI / 2) newPitch = (GLfloat)-PI / 2;
+
+	GLfloat newYaw = (GLfloat)(cam.yaw + PI * (oldMouseX - mouseX) / 180);
+
+	cam.pitch = newPitch;
+	cam.yaw = newYaw;
+}
+
+void init() {
+	objModel = GLObject();
+	objModel.buf_vertices = {
+		-1.0f,-1.0f,-1.0f, // triangle 1 : begin
+		-1.0f,-1.0f, 1.0f,
+		-1.0f, 1.0f, 1.0f, // triangle 1 : end
+		1.0f, 1.0f,-1.0f, // triangle 2 : begin
+		-1.0f,-1.0f,-1.0f,
+		-1.0f, 1.0f,-1.0f, // triangle 2 : end
+		1.0f,-1.0f, 1.0f,
+		-1.0f,-1.0f,-1.0f,
+		1.0f,-1.0f,-1.0f,
+		1.0f, 1.0f,-1.0f,
+		1.0f,-1.0f,-1.0f,
+		-1.0f,-1.0f,-1.0f,
+		-1.0f,-1.0f,-1.0f,
+		-1.0f, 1.0f, 1.0f,
+		-1.0f, 1.0f,-1.0f,
+		1.0f,-1.0f, 1.0f,
+		-1.0f,-1.0f, 1.0f,
+		-1.0f,-1.0f,-1.0f,
+		-1.0f, 1.0f, 1.0f,
+		-1.0f,-1.0f, 1.0f,
+		1.0f,-1.0f, 1.0f,
+		1.0f, 1.0f, 1.0f,
+		1.0f,-1.0f,-1.0f,
+		1.0f, 1.0f,-1.0f,
+		1.0f,-1.0f,-1.0f,
+		1.0f, 1.0f, 1.0f,
+		1.0f,-1.0f, 1.0f,
+		1.0f, 1.0f, 1.0f,
+		1.0f, 1.0f,-1.0f,
+		-1.0f, 1.0f,-1.0f,
+		1.0f, 1.0f, 1.0f,
+		-1.0f, 1.0f,-1.0f,
+		-1.0f, 1.0f, 1.0f,
+		1.0f, 1.0f, 1.0f,
+		-1.0f, 1.0f, 1.0f,
+		1.0f,-1.0f, 1.0f
+	};
 }
 
 //redraw the screen @ 60 FPS
@@ -306,14 +303,13 @@ int main(int argc, char* argv[]) {
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_MULTISAMPLE);
 	glEnable(GL_MULTISAMPLE);
 
+	glDepthFunc(GL_LESS);
+	glDepthMask(GL_TRUE);
+
 	glutInitWindowSize(screenWidth, screenHeight);
 	glutInitWindowPosition(50, 50);
 	glViewport(0, 0, screenWidth, screenHeight);
 	glutCreateWindow("CS446 - Project 1");
-	
-	//create menu and set menu handler
-	createMenu();
-	glutMenuStatusFunc(processMenuStatus);
 
 	//handle drawing and screen resizing
 	glutDisplayFunc(displayLoop);
@@ -331,8 +327,13 @@ int main(int argc, char* argv[]) {
 	glutKeyboardUpFunc(releaseNormalKey);
 
 	//handle mouse
+	glutWarpPointer(screenWidth / 2, screenHeight / 2);
 	glutMouseFunc(mouseButton);
-	//glutMotionFunc(mouseMove);
+	glutMotionFunc(mouseMove);
+	glutPassiveMotionFunc(mouseMove);
+
+	//initialize the 3D model
+	init();
 
 	//start the main OpenGL loop
 	glutMainLoop();
