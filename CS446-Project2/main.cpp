@@ -18,39 +18,63 @@ bool keyPressed[KEY_MAX] = { false };
 
 class Camera {
 public:
-	GLfloat x = 0;
-	GLfloat y = 0;
-	GLfloat z = 0;
-	GLfloat pitch = 0;
-	GLfloat yaw = 0;
-
 	void look() {
-		GLfloat dx = /*cos(pitch) **/ sin(yaw);
-		GLfloat dy = sin(pitch);
-		GLfloat dz = /*cos(pitch) **/ cos(yaw);
-		
+		GLfloat dx = cos(m_pitch) * sin(m_yaw);
+		GLfloat dy = sin(m_pitch);
+		GLfloat dz = cos(m_pitch) * cos(m_yaw);
 
+		//move the camera
 		if (keyPressed[KEY_W]) {
-			x += dx;
-			y += dy;
-			z += dz;
+			m_x += dx * m_speedMod;
+			m_y += dy * m_speedMod;
+			m_z += dz * m_speedMod;
 		}
 		if (keyPressed[KEY_S]) {
-			x -= dx;
-			y -= dy;
-			z -= dz;
+			m_x -= dx * m_speedMod;
+			m_y -= dy * m_speedMod;
+			m_z -= dz * m_speedMod;
 		}
 		if (keyPressed[KEY_A]) {
-			x += -dz;
-			z += dx;
+			m_x -= -dz * m_speedMod;
+			m_z -=  dx * m_speedMod;
 		}
 		if (keyPressed[KEY_D]) {
-			x -= -dz;
-			z -= dx;
+			m_x += -dz * m_speedMod;
+			m_z +=  dx * m_speedMod;
 		}
 
-		gluLookAt(x, y, z, x + dx, y + dy, z + dz, 0, 1, 0);
+		gluLookAt(m_x, m_y, m_z, m_x + dx, m_y + dy, m_z + dz, 0, 1, 0);
 	}
+
+	void changePitch(GLfloat pitch) {
+		m_pitch += pitch * m_lookMod;
+
+		//set between -PI/2 and PI/2
+		if (m_pitch > PI / 2) m_pitch = (GLfloat)PI / 2;
+		if (m_pitch < -PI / 2) m_pitch = (GLfloat)-PI / 2;
+	}
+
+	void changeYaw(GLfloat yaw) {
+		m_yaw += yaw * m_lookMod;
+
+		//normalize between 0 & 2*PI
+		while (m_yaw > 2 * PI) {
+			m_yaw -= 2 * (GLfloat)PI;
+		}
+		while (m_yaw < 0) {
+			m_yaw += 2 * (GLfloat)PI;
+		}
+	}
+
+private:
+	GLfloat m_x = 0;
+	GLfloat m_y = 0;
+	GLfloat m_z = 0;
+	GLfloat m_pitch = 0;
+	GLfloat m_yaw = (GLfloat)-PI;
+
+	GLfloat m_speedMod = 0.25;
+	GLfloat m_lookMod = 0.5;
 };
 
 //shape to be transformed
@@ -78,7 +102,7 @@ void displayLoop(void) {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	GLfloat aspect = (GLfloat)screenWidth / (screenHeight > 0 ? screenHeight : 1);
-	gluPerspective(45.0f, aspect, 0.1f, 100.0f);
+	gluPerspective(45.0f, aspect, 0.1f, 1000.0f);
 	cam.look();
 
 	glMatrixMode(GL_MODELVIEW);
@@ -131,26 +155,32 @@ void displayLoop(void) {
 	glVertex3f(1.0f, -1.0f, -1.0f);
 	glEnd();  // End of drawing color-cube
 
-	//glEnableClientState(GL_VERTEX_ARRAY);
-	//glVertexPointer(3, GL_FLOAT, 0, &objModel.buf_vertices[0]);
-	//glDrawArrays(GL_TRIANGLES, 0, 12 * 3);
+	glTranslatef(10, 0, 0);
 
-	/*
+	//cube #2
+	glEnableClientState(GL_VERTEX_ARRAY);
+	//glEnableClientState(GL_COLOR_ARRAY);
+	glVertexPointer(3, GL_FLOAT, 0, &objModel.buf_vertices[0]);
+	//glColorPointer(3, GL_FLOAT, 0, colors);
+	glDrawArrays(GL_TRIANGLES, 0, 18);
+	glColor3f(0.0f, 0.0f, 1.0f);     // Blue
+	glDrawArrays(GL_TRIANGLES, 18, 18);
+
 	//draw GUI
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluOrtho2D(0, screenWidth, screenHeight, 0);
-	//glDisable(GL_DEPTH_TEST);
-	//glDisable(GL_CULL_FACE);
-	//glDisable(GL_TEXTURE_2D);
-	//glDisable(GL_LIGHTING);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_LIGHTING);
 
 	glBegin(GL_TRIANGLES);
 	glVertex3f(0, 200, 0);
 	glVertex3f(100, 100, 0);
 	glVertex3f(200, 200, 0);
 	glEnd();
-	*/
 
 	//swap buffers (redraw screen)
 	glutSwapBuffers();
@@ -239,14 +269,11 @@ void mouseMove(int x, int y) {
 	mouseX = x;
 	mouseY = y;
 
-	GLfloat newPitch = (GLfloat)(cam.pitch + PI * (oldMouseY - mouseY) / 180);
-	if (newPitch > PI / 2) newPitch = (GLfloat)PI / 2;
-	if (newPitch < -PI / 2) newPitch = (GLfloat)-PI / 2;
+	GLfloat deltaPitch = (GLfloat)(PI * (oldMouseY - mouseY) / 180);
+	GLfloat deltaYaw = (GLfloat)(PI * (oldMouseX - mouseX) / 180);
 
-	GLfloat newYaw = (GLfloat)(cam.yaw + PI * (oldMouseX - mouseX) / 180);
-
-	cam.pitch = newPitch;
-	cam.yaw = newYaw;
+	cam.changePitch(deltaPitch);
+	cam.changeYaw(deltaYaw);
 }
 
 void init() {
@@ -289,6 +316,14 @@ void init() {
 		-1.0f, 1.0f, 1.0f,
 		1.0f,-1.0f, 1.0f
 	};
+
+	/*
+	GLfloat colors[] = {
+        0.0, 1.0, 0.0,
+        0.0, 1.0, 0.0,
+        0.0, 1.0, 0.0
+    };
+	*/
 }
 
 //redraw the screen @ 60 FPS
