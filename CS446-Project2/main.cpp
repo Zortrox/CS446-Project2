@@ -35,12 +35,12 @@ public:
 			m_z -= dz * m_speedMod;
 		}
 		if (keyPressed[KEY_A]) {
-			m_x -= -dz * m_speedMod;
-			m_z -=  dx * m_speedMod;
+			m_x += cos(m_yaw) * m_speedMod;
+			m_z += -sin(m_yaw) * m_speedMod;
 		}
 		if (keyPressed[KEY_D]) {
-			m_x += -dz * m_speedMod;
-			m_z +=  dx * m_speedMod;
+			m_x -= cos(m_yaw) * m_speedMod;
+			m_z -= -sin(m_yaw) * m_speedMod;
 		}
 
 		gluLookAt(m_x, m_y, m_z, m_x + dx, m_y + dy, m_z + dz, 0, 1, 0);
