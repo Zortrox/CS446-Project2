@@ -1,15 +1,18 @@
 /* Matthew Clark
    CS 446 - Computer Graphics
 ================================================
-	- Left click for circles
-	- Right click to transform shape (cat) with menu
-	- Middle click to move shape (cat)
+	- WASD for camera movement
+	- mouse move for camera looking
+	- Q/E to change field of view
+	- Esc to quit
 */
 
 #include <GL\glew.h>
 #include <GL\freeglut.h>
 #include <vector>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
 #define PI 3.14159
 
@@ -101,6 +104,8 @@ private:
 class GLObject {
 public:
 	std::vector<GLfloat> buf_vertices;
+	std::vector<GLfloat> buf_normals;
+	std::vector<GLuint> buf_faces;
 	std::vector<GLfloat> buf_colors;
 };
 
@@ -112,6 +117,8 @@ void displayLoop(void) {
 	//clear screen to black
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	glEnable(GL_LIGHTING);
 
 	//draw model
 	glMatrixMode(GL_PROJECTION);
@@ -122,14 +129,16 @@ void displayLoop(void) {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	glTranslatef(0, 0, -10);
+	glTranslatef(0, -4, -10);
 
-	//cool colored cube
+	//cool model
+	GLfloat color[] = { 0.51f, 0.28f, 0.22f, 1.0f };	//brown
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, color);
 	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
 	glVertexPointer(3, GL_FLOAT, 0, &objModel.buf_vertices[0]);
-	glColorPointer(3, GL_FLOAT, 0, &objModel.buf_colors[0]);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glNormalPointer(GL_FLOAT, 0, &objModel.buf_normals[0]);
+	glDrawElements(GL_QUADS, (GLsizei)objModel.buf_faces.size(), GL_UNSIGNED_INT, &objModel.buf_faces[0]);
 
 	//draw GUI
 	glMatrixMode(GL_MODELVIEW);
@@ -141,11 +150,14 @@ void displayLoop(void) {
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_LIGHTING);
 
+	//draw stuff on screen
+	/*
 	glBegin(GL_TRIANGLES);
 	glVertex3f(0, 200, 0);
 	glVertex3f(100, 100, 0);
 	glVertex3f(200, 200, 0);
 	glEnd();
+	*/
 
 	//swap buffers (redraw screen)
 	glutSwapBuffers();
@@ -249,84 +261,73 @@ void mouseMove(int x, int y) {
 
 void init() {
 	objModel = GLObject();
-	objModel.buf_vertices = {
-		-1.0f,-1.0f,-1.0f, // triangle 1 : begin
-		-1.0f,-1.0f, 1.0f,
-		-1.0f, 1.0f, 1.0f, // triangle 1 : end
-		1.0f, 1.0f,-1.0f, // triangle 2 : begin
-		-1.0f,-1.0f,-1.0f,
-		-1.0f, 1.0f,-1.0f, // triangle 2 : end
-		1.0f,-1.0f, 1.0f,
-		-1.0f,-1.0f,-1.0f,
-		1.0f,-1.0f,-1.0f,
-		1.0f, 1.0f,-1.0f,
-		1.0f,-1.0f,-1.0f,
-		-1.0f,-1.0f,-1.0f,
-		-1.0f,-1.0f,-1.0f,
-		-1.0f, 1.0f, 1.0f,
-		-1.0f, 1.0f,-1.0f,
-		1.0f,-1.0f, 1.0f,
-		-1.0f,-1.0f, 1.0f,
-		-1.0f,-1.0f,-1.0f,
-		-1.0f, 1.0f, 1.0f,
-		-1.0f,-1.0f, 1.0f,
-		1.0f,-1.0f, 1.0f,
-		1.0f, 1.0f, 1.0f,
-		1.0f,-1.0f,-1.0f,
-		1.0f, 1.0f,-1.0f,
-		1.0f,-1.0f,-1.0f,
-		1.0f, 1.0f, 1.0f,
-		1.0f,-1.0f, 1.0f,
-		1.0f, 1.0f, 1.0f,
-		1.0f, 1.0f,-1.0f,
-		-1.0f, 1.0f,-1.0f,
-		1.0f, 1.0f, 1.0f,
-		-1.0f, 1.0f,-1.0f,
-		-1.0f, 1.0f, 1.0f,
-		1.0f, 1.0f, 1.0f,
-		-1.0f, 1.0f, 1.0f,
-		1.0f,-1.0f, 1.0f
-	};
 
-	
-	objModel.buf_colors = {
-		0.9129f, 0.2869f, 0.3804f,
-		0.0905f, 0.8409f, 0.2749f,
-		0.3311f, 0.4323f, 0.2830f,
-		0.3952f, 0.3406f, 0.9958f,
-		0.1566f, 0.7251f, 0.0676f,
-		0.2462f, 0.5910f, 0.8968f,
-		0.3476f, 0.5900f, 0.8106f,
-		0.3273f, 0.9957f, 0.4397f,
-		0.1233f, 0.8321f, 0.3267f,
-		0.4228f, 0.7629f, 0.4454f,
-		0.6090f, 0.6238f, 0.3802f,
-		0.4040f, 0.9523f, 0.0277f,
-		0.5113f, 0.6947f, 0.0112f,
-		0.3262f, 0.4916f, 0.1642f,
-		0.2375f, 0.6212f, 0.4669f,
-		0.1308f, 0.1406f, 0.0793f,
-		0.6079f, 0.2687f, 0.8032f,
-		0.7420f, 0.3562f, 0.7075f,
-		0.6217f, 0.0282f, 0.9930f,
-		0.0482f, 0.9542f, 0.0747f,
-		0.8987f, 0.7082f, 0.3587f,
-		0.6970f, 0.6384f, 0.0869f,
-		0.9515f, 0.7175f, 0.5247f,
-		0.6862f, 0.0376f, 0.7484f,
-		0.0726f, 0.4401f, 0.6465f,
-		0.3212f, 0.0405f, 0.6477f,
-		0.9670f, 0.4873f, 0.5832f,
-		0.5030f, 0.2822f, 0.1609f,
-		0.6579f, 0.8766f, 0.3217f,
-		0.0131f, 0.9865f, 0.2878f,
-		0.8901f, 0.2658f, 0.0933f,
-		0.6414f, 0.4615f, 0.1820f,
-		0.1086f, 0.5049f, 0.8790f,
-		0.3964f, 0.6547f, 0.6725f,
-		0.3330f, 0.0772f, 0.5582f,
-		0.8698f, 0.4786f, 0.6829f
-    };
+	std::ifstream file("tower-normals-notri.txt");
+	if (file.is_open()) {
+		std::string line;
+
+		std::vector<GLfloat> tempVertices;
+		std::vector<GLfloat> tempNormals;
+
+		bool firstFace = true;
+
+		while(std::getline(file, line))
+		{
+			std::stringstream ss(line);
+
+			std::string type;
+			ss >> type;
+
+			if (type == "v") {
+				GLfloat v1, v2, v3;
+				ss >> v1;
+				ss >> v2;
+				ss >> v3;
+
+				objModel.buf_vertices.push_back(v1);
+				objModel.buf_vertices.push_back(v2);
+				objModel.buf_vertices.push_back(v3);
+			}
+			else if (type == "vn") {
+				GLfloat n1, n2, n3;
+				ss >> n1;
+				ss >> n2;
+				ss >> n3;
+
+				tempNormals.push_back(n1);
+				tempNormals.push_back(n2);
+				tempNormals.push_back(n3);
+			}
+			else if (type == "f") {
+				if (firstFace) {
+					objModel.buf_normals.resize(objModel.buf_vertices.size());
+				}
+
+				GLuint v1, n1, v2, n2, v3, n3, v4, n4;
+				ss >> v1;
+				ss >> n1;
+				ss >> v2;
+				ss >> n2;
+				ss >> v3;
+				ss >> n3;
+				ss >> v4;
+				ss >> n4;
+
+				//faces
+				objModel.buf_faces.push_back(v1 - 1);
+				objModel.buf_faces.push_back(v2 - 1);
+				objModel.buf_faces.push_back(v3 - 1);
+				objModel.buf_faces.push_back(v4 - 1);
+				//normal buffer
+				objModel.buf_normals[v1 - 1] = tempNormals[n1 - 1];
+				objModel.buf_normals[v2 - 1] = tempNormals[n2 - 1];
+				objModel.buf_normals[v3 - 1] = tempNormals[n3 - 1];
+				objModel.buf_normals[v4 - 1] = tempNormals[n4 - 1];
+			}
+		}
+
+		file.close();
+	}
 }
 
 //redraw the screen @ 60 FPS
@@ -365,7 +366,7 @@ int main(int argc, char* argv[]) {
 	glutKeyboardUpFunc(releaseNormalKey);
 
 	//handle mouse
-	glutSetCursor(GLUT_CURSOR_NONE);
+	//glutSetCursor(GLUT_CURSOR_NONE);
 	glutWarpPointer(screenWidth / 2, screenHeight / 2);
 	glutMouseFunc(mouseButton);
 	glutMotionFunc(mouseMove);
@@ -373,6 +374,16 @@ int main(int argc, char* argv[]) {
 
 	//initialize the 3D model
 	init();
+
+	//light
+	glShadeModel(GL_SMOOTH);
+	glEnable(GL_LIGHT0);
+	GLfloat lightPos[] = { 0, 20, -10, 0 };
+	GLfloat lightAmb[] = { .2f, .2f, .2f, 1 };
+	GLfloat lightDif[] = { 1, 1, 1, 1 };
+	glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+	glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmb);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDif);
 
 	//start the main OpenGL loop
 	glutMainLoop();
