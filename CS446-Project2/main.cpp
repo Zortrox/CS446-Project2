@@ -81,10 +81,12 @@ private:
 class GLObject {
 public:
 	std::vector<GLfloat> buf_vertices;
+	std::vector<GLfloat> buf_colors;
 };
 
 Camera cam = Camera();
 GLObject objModel;
+bool mouseWarped = false;
 
 //screen width and height to modify matrices (like when resizing)
 int screenWidth = 800;
@@ -95,7 +97,6 @@ int mouseY = screenHeight / 2;
 void displayLoop(void) {
 	//clear screen to black
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	glEnable(GL_DEPTH_TEST);
 
 	//draw model
@@ -110,61 +111,12 @@ void displayLoop(void) {
 
 	glTranslatef(0, 0, -10);
 
-	glBegin(GL_QUADS);                // Begin drawing the color cube with 6 quads
-									  // Top face (y = 1.0f)
-									  // Define vertices in counter-clockwise (CCW) order with normal pointing out
-	glColor3f(0.0f, 1.0f, 0.0f);     // Green
-	glVertex3f(1.0f, 1.0f, -1.0f);
-	glVertex3f(-1.0f, 1.0f, -1.0f);
-	glVertex3f(-1.0f, 1.0f, 1.0f);
-	glVertex3f(1.0f, 1.0f, 1.0f);
-
-	// Bottom face (y = -1.0f)
-	glColor3f(1.0f, 0.5f, 0.0f);     // Orange
-	glVertex3f(1.0f, -1.0f, 1.0f);
-	glVertex3f(-1.0f, -1.0f, 1.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-	glVertex3f(1.0f, -1.0f, -1.0f);
-
-	// Front face  (z = 1.0f)
-	glColor3f(1.0f, 0.0f, 0.0f);     // Red
-	glVertex3f(1.0f, 1.0f, 1.0f);
-	glVertex3f(-1.0f, 1.0f, 1.0f);
-	glVertex3f(-1.0f, -1.0f, 1.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-
-	// Back face (z = -1.0f)
-	glColor3f(1.0f, 1.0f, 0.0f);     // Yellow
-	glVertex3f(1.0f, -1.0f, -1.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-	glVertex3f(-1.0f, 1.0f, -1.0f);
-	glVertex3f(1.0f, 1.0f, -1.0f);
-
-	// Left face (x = -1.0f)
-	glColor3f(0.0f, 0.0f, 1.0f);     // Blue
-	glVertex3f(-1.0f, 1.0f, 1.0f);
-	glVertex3f(-1.0f, 1.0f, -1.0f);
-	glVertex3f(-1.0f, -1.0f, -1.0f);
-	glVertex3f(-1.0f, -1.0f, 1.0f);
-
-	// Right face (x = 1.0f)
-	glColor3f(1.0f, 0.0f, 1.0f);     // Magenta
-	glVertex3f(1.0f, 1.0f, -1.0f);
-	glVertex3f(1.0f, 1.0f, 1.0f);
-	glVertex3f(1.0f, -1.0f, 1.0f);
-	glVertex3f(1.0f, -1.0f, -1.0f);
-	glEnd();  // End of drawing color-cube
-
-	glTranslatef(10, 0, 0);
-
-	//cube #2
+	//cool colored cube
 	glEnableClientState(GL_VERTEX_ARRAY);
-	//glEnableClientState(GL_COLOR_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
 	glVertexPointer(3, GL_FLOAT, 0, &objModel.buf_vertices[0]);
-	//glColorPointer(3, GL_FLOAT, 0, colors);
-	glDrawArrays(GL_TRIANGLES, 0, 18);
-	glColor3f(0.0f, 0.0f, 1.0f);     // Blue
-	glDrawArrays(GL_TRIANGLES, 18, 18);
+	glColorPointer(3, GL_FLOAT, 0, &objModel.buf_colors[0]);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
 
 	//draw GUI
 	glMatrixMode(GL_MODELVIEW);
@@ -317,13 +269,45 @@ void init() {
 		1.0f,-1.0f, 1.0f
 	};
 
-	/*
-	GLfloat colors[] = {
-        0.0, 1.0, 0.0,
-        0.0, 1.0, 0.0,
-        0.0, 1.0, 0.0
+	
+	objModel.buf_colors = {
+		0.9129f, 0.2869f, 0.3804f,
+		0.0905f, 0.8409f, 0.2749f,
+		0.3311f, 0.4323f, 0.2830f,
+		0.3952f, 0.3406f, 0.9958f,
+		0.1566f, 0.7251f, 0.0676f,
+		0.2462f, 0.5910f, 0.8968f,
+		0.3476f, 0.5900f, 0.8106f,
+		0.3273f, 0.9957f, 0.4397f,
+		0.1233f, 0.8321f, 0.3267f,
+		0.4228f, 0.7629f, 0.4454f,
+		0.6090f, 0.6238f, 0.3802f,
+		0.4040f, 0.9523f, 0.0277f,
+		0.5113f, 0.6947f, 0.0112f,
+		0.3262f, 0.4916f, 0.1642f,
+		0.2375f, 0.6212f, 0.4669f,
+		0.1308f, 0.1406f, 0.0793f,
+		0.6079f, 0.2687f, 0.8032f,
+		0.7420f, 0.3562f, 0.7075f,
+		0.6217f, 0.0282f, 0.9930f,
+		0.0482f, 0.9542f, 0.0747f,
+		0.8987f, 0.7082f, 0.3587f,
+		0.6970f, 0.6384f, 0.0869f,
+		0.9515f, 0.7175f, 0.5247f,
+		0.6862f, 0.0376f, 0.7484f,
+		0.0726f, 0.4401f, 0.6465f,
+		0.3212f, 0.0405f, 0.6477f,
+		0.9670f, 0.4873f, 0.5832f,
+		0.5030f, 0.2822f, 0.1609f,
+		0.6579f, 0.8766f, 0.3217f,
+		0.0131f, 0.9865f, 0.2878f,
+		0.8901f, 0.2658f, 0.0933f,
+		0.6414f, 0.4615f, 0.1820f,
+		0.1086f, 0.5049f, 0.8790f,
+		0.3964f, 0.6547f, 0.6725f,
+		0.3330f, 0.0772f, 0.5582f,
+		0.8698f, 0.4786f, 0.6829f
     };
-	*/
 }
 
 //redraw the screen @ 60 FPS
@@ -362,6 +346,7 @@ int main(int argc, char* argv[]) {
 	glutKeyboardUpFunc(releaseNormalKey);
 
 	//handle mouse
+	glutSetCursor(GLUT_CURSOR_NONE);
 	glutWarpPointer(screenWidth / 2, screenHeight / 2);
 	glutMouseFunc(mouseButton);
 	glutMotionFunc(mouseMove);
