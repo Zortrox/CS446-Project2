@@ -16,9 +16,20 @@
 enum keys {KEY_W, KEY_A, KEY_S, KEY_D, KEY_MAX};
 bool keyPressed[KEY_MAX] = { false };
 
+//screen width and height to modify matrices (like when resizing)
+int screenWidth = 800;
+int screenHeight = 600;
+int mouseX = screenWidth / 2;
+int mouseY = screenHeight / 2;
+
 class Camera {
 public:
 	void look() {
+		//set perspective
+		GLfloat aspect = (GLfloat)screenWidth / (screenHeight > 0 ? screenHeight : 1);
+		gluPerspective(m_fov, aspect, 0.1f, 1000.0f);
+
+		//set lookAt
 		GLfloat dx = cos(m_pitch) * sin(m_yaw);
 		GLfloat dy = sin(m_pitch);
 		GLfloat dz = cos(m_pitch) * cos(m_yaw);
@@ -35,12 +46,12 @@ public:
 			m_z -= dz * m_speedMod;
 		}
 		if (keyPressed[KEY_A]) {
-			m_x -= -dz * m_speedMod;
-			m_z -=  dx * m_speedMod;
+			m_x += cos(m_yaw) * m_speedMod;
+			m_z += -sin(m_yaw) * m_speedMod;
 		}
 		if (keyPressed[KEY_D]) {
-			m_x += -dz * m_speedMod;
-			m_z +=  dx * m_speedMod;
+			m_x -= cos(m_yaw) * m_speedMod;
+			m_z -= -sin(m_yaw) * m_speedMod;
 		}
 
 		gluLookAt(m_x, m_y, m_z, m_x + dx, m_y + dy, m_z + dz, 0, 1, 0);
@@ -66,12 +77,21 @@ public:
 		}
 	}
 
+	void changeFoV(GLfloat fov) {
+		m_fov += fov;
+
+		if (m_fov > 360) m_fov = 360.0f;
+		else if (m_fov < 0) m_fov = 0.0f;
+	}
+
 private:
 	GLfloat m_x = 0;
 	GLfloat m_y = 0;
 	GLfloat m_z = 0;
 	GLfloat m_pitch = 0;
 	GLfloat m_yaw = (GLfloat)-PI;
+
+	GLfloat m_fov = 45.0f;
 
 	GLfloat m_speedMod = 0.25;
 	GLfloat m_lookMod = 0.5;
@@ -88,12 +108,6 @@ Camera cam = Camera();
 GLObject objModel;
 bool mouseWarped = false;
 
-//screen width and height to modify matrices (like when resizing)
-int screenWidth = 800;
-int screenHeight = 600;
-int mouseX = screenWidth / 2;
-int mouseY = screenHeight / 2;
-
 void displayLoop(void) {
 	//clear screen to black
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -102,8 +116,7 @@ void displayLoop(void) {
 	//draw model
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	GLfloat aspect = (GLfloat)screenWidth / (screenHeight > 0 ? screenHeight : 1);
-	gluPerspective(45.0f, aspect, 0.1f, 1000.0f);
+	
 	cam.look();
 
 	glMatrixMode(GL_MODELVIEW);
@@ -162,6 +175,12 @@ void pressNormalKey(unsigned char key, int x, int y) {
 		break;
 	case 'd':
 		keyPressed[KEY_D] = true;
+		break;
+	case 'q':
+		cam.changeFoV(-10);
+		break;
+	case 'e':
+		cam.changeFoV(10);
 		break;
 	}
 }
