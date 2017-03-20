@@ -16,28 +16,31 @@
 
 #define PI 3.14159
 
+//move when key is held
 enum keys {KEY_W, KEY_A, KEY_S, KEY_D, KEY_MAX};
 bool keyPressed[KEY_MAX] = { false };
 
 //screen width and height to modify matrices (like when resizing)
 int screenWidth = 800;
 int screenHeight = 600;
+
+//mouse coords to determine how much to move camera
 int mouseX = screenWidth / 2;
 int mouseY = screenHeight / 2;
 
 class Camera {
 public:
 	void look() {
-		//set perspective
+		//set aspect & perspective
 		GLfloat aspect = (GLfloat)screenWidth / (screenHeight > 0 ? screenHeight : 1);
 		gluPerspective(m_fov, aspect, 0.1f, 1000.0f);
 
-		//set lookAt
+		//set change amount by pitch and yaw of the camera
 		GLfloat dx = cos(m_pitch) * sin(m_yaw);
 		GLfloat dy = sin(m_pitch);
 		GLfloat dz = cos(m_pitch) * cos(m_yaw);
 
-		//move the camera
+		//change lookAt variables based on what keys are being held
 		if (keyPressed[KEY_W]) {
 			m_x += dx * m_speedMod;
 			m_y += dy * m_speedMod;
@@ -57,6 +60,7 @@ public:
 			m_z -= -sin(m_yaw) * m_speedMod;
 		}
 
+		//move the camera
 		gluLookAt(m_x, m_y, m_z, m_x + dx, m_y + dy, m_z + dz, 0, 1, 0);
 	}
 
@@ -71,7 +75,7 @@ public:
 	void changeYaw(GLfloat yaw) {
 		m_yaw += yaw * m_lookMod;
 
-		//normalize between 0 & 2*PI
+		//set between 0 & 2*PI
 		while (m_yaw > 2 * PI) {
 			m_yaw -= 2 * (GLfloat)PI;
 		}
@@ -83,6 +87,7 @@ public:
 	void changeFoV(GLfloat fov) {
 		m_fov += fov;
 
+		//set between 0 and 360
 		if (m_fov > 360) m_fov = 360.0f;
 		else if (m_fov < 0) m_fov = 0.0f;
 	}
@@ -92,10 +97,11 @@ private:
 	GLfloat m_y = 0;
 	GLfloat m_z = 0;
 	GLfloat m_pitch = 0;
-	GLfloat m_yaw = (GLfloat)-PI;
+	GLfloat m_yaw = 0;
 
 	GLfloat m_fov = 45.0f;
 
+	//modify movement and look speeds
 	GLfloat m_speedMod = 0.25;
 	GLfloat m_lookMod = 0.5;
 };
@@ -109,27 +115,31 @@ public:
 	std::vector<GLfloat> buf_colors;
 };
 
+//global camera and drawing object
 Camera cam = Camera();
 GLObject objModel;
-bool mouseWarped = false;
 
 void displayLoop(void) {
-	//clear screen to black
+	//clear screen bits and enable 3D stuff
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_LIGHTING);
 
-	//draw model
+	//===========================================================================
+	//	DRAW MODEL
+	//===========================================================================
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	
+	//change camera view
 	cam.look();
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	glTranslatef(0, -4, -10);
+	//draw everything in front of the camera
+	glTranslatef(0, -4, 10);
 
 	//cool model
 	GLfloat color[] = { 0.51f, 0.28f, 0.22f, 1.0f };	//brown
@@ -140,17 +150,22 @@ void displayLoop(void) {
 	glNormalPointer(GL_FLOAT, 0, &objModel.buf_normals[0]);
 	glDrawElements(GL_QUADS, (GLsizei)objModel.buf_faces.size(), GL_UNSIGNED_INT, &objModel.buf_faces[0]);
 
-	//draw GUI
+	//===========================================================================
+	//	DRAW GUI
+	//===========================================================================
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
+
+	//set screen space coords and disable 3D stuff
 	gluOrtho2D(0, screenWidth, screenHeight, 0);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_LIGHTING);
 
 	//draw stuff on screen
+	//just a test that I removed
 	/*
 	glBegin(GL_TRIANGLES);
 	glVertex3f(0, 200, 0);
@@ -176,6 +191,8 @@ void pressNormalKey(unsigned char key, int x, int y) {
 	case 27:
 		exit(1);
 		break;
+
+	//move with WASD
 	case 'w':
 		keyPressed[KEY_W] = true;
 		break;
@@ -188,6 +205,8 @@ void pressNormalKey(unsigned char key, int x, int y) {
 	case 'd':
 		keyPressed[KEY_D] = true;
 		break;
+
+	//change FoV with Q & E
 	case 'q':
 		cam.changeFoV(-10);
 		break;
@@ -197,7 +216,7 @@ void pressNormalKey(unsigned char key, int x, int y) {
 	}
 }
 
-//when a key is released (not needed)
+//when a key is released
 void releaseNormalKey(unsigned char key, int x, int y) {
 	switch (key) {
 	case 'w':
@@ -215,7 +234,7 @@ void releaseNormalKey(unsigned char key, int x, int y) {
 	}
 }
 
-//handler for mouse buttons
+//handler for mouse buttons (not used in this program)
 void mouseButton(int button, int state, int x, int y) {
 	switch (button) {
 	//handle the left mouse button
@@ -246,12 +265,14 @@ void mouseButton(int button, int state, int x, int y) {
 	}
 }
 
+//when mouse moves
 void mouseMove(int x, int y) {
 	int oldMouseX = mouseX;
 	int oldMouseY = mouseY;
 	mouseX = x;
 	mouseY = y;
 
+	//update 
 	GLfloat deltaPitch = (GLfloat)(PI * (oldMouseY - mouseY) / 180);
 	GLfloat deltaYaw = (GLfloat)(PI * (oldMouseX - mouseX) / 180);
 
@@ -259,9 +280,11 @@ void mouseMove(int x, int y) {
 	cam.changeYaw(deltaYaw);
 }
 
+//load object
 void init() {
 	objModel = GLObject();
 
+	//open object file
 	std::ifstream file("tower-normals-notri.txt");
 	if (file.is_open()) {
 		std::string line;
@@ -271,6 +294,7 @@ void init() {
 
 		bool firstFace = true;
 
+		//read all lines
 		while(std::getline(file, line))
 		{
 			std::stringstream ss(line);
@@ -278,6 +302,7 @@ void init() {
 			std::string type;
 			ss >> type;
 
+			//grab all vertices and store in the object's vector
 			if (type == "v") {
 				GLfloat v1, v2, v3;
 				ss >> v1;
@@ -288,6 +313,8 @@ void init() {
 				objModel.buf_vertices.push_back(v2);
 				objModel.buf_vertices.push_back(v3);
 			}
+
+			//grab all normals and store in a temp vector
 			else if (type == "vn") {
 				GLfloat n1, n2, n3;
 				ss >> n1;
@@ -298,6 +325,8 @@ void init() {
 				tempNormals.push_back(n2);
 				tempNormals.push_back(n3);
 			}
+
+			//grab all faces and store in the object's vector
 			else if (type == "f") {
 				if (firstFace) {
 					objModel.buf_normals.resize(objModel.buf_vertices.size());
@@ -318,7 +347,7 @@ void init() {
 				objModel.buf_faces.push_back(v2 - 1);
 				objModel.buf_faces.push_back(v3 - 1);
 				objModel.buf_faces.push_back(v4 - 1);
-				//normal buffer
+				//normal buffer associate with vertex and face data
 				objModel.buf_normals[v1 - 1] = tempNormals[n1 - 1];
 				objModel.buf_normals[v2 - 1] = tempNormals[n2 - 1];
 				objModel.buf_normals[v3 - 1] = tempNormals[n3 - 1];
@@ -342,6 +371,7 @@ int main(int argc, char* argv[]) {
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_MULTISAMPLE);
 	glEnable(GL_MULTISAMPLE);
 
+	//set depth function
 	glDepthFunc(GL_LESS);
 	glDepthMask(GL_TRUE);
 
@@ -375,7 +405,7 @@ int main(int argc, char* argv[]) {
 	//initialize the 3D model
 	init();
 
-	//light
+	//lighting and shading
 	glShadeModel(GL_SMOOTH);
 	glEnable(GL_LIGHT0);
 	GLfloat lightPos[] = { 0, 20, -10, 0 };
